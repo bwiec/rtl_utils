@@ -1,9 +1,6 @@
 import sys
 
 class module_parser:
-    _state = "INIT"
-    _file = ""
-    _cur_line = ""
     _properties = {
         "module_name" : [],
         "parameters" : [],
@@ -12,61 +9,99 @@ class module_parser:
         "inouts" : [],
         "input_clocks" : []
     }
+    _state = "MODULE"
+    _file = ""
+    _fid = ""
+    _cur_line = ""
+    _cur_line_idx = 0
 
     def __init__(self, file):
         self._file = file
-        self._state = "INIT"
         self.__parse_input_file()
         self.__get_input_clocks()
         
     def __parse_input_file(self):
-        fid = open(self._file, 'r')
-        for line in fid:
+        self._fid = open(self._file, 'r')
+        for line in self._fid:
+            self._cur_line_idx = self._cur_line_idx + 1
             self._cur_line = line.lstrip().rstrip()
-
-            line_array = self._cur_line.split(" ")            
-            if self._state == "INIT":
-                if line_array[0] == "module": # Skip initial lines until we find uncommented 'module' keyword first
-                    self.__get_module_name_from_line(line_array)
-                    self._state = "PARAM"
-                    continue
-            if self._state == "PARAM":
-                if line_array[0] == "(": # No parameters in this module
-                    self._state = "PORTS"
-                elif line_array[0] == "#(": # Found parameter entry point
-                    self.__get_parameters(fid)
-                    self._state = "PORTS"
-                    continue
-            if self._state == "PORTS":
-                if line_array[0] == "(":
-                    self.__get_ports(fid)
-                    self._state = "DONE"
+            if self._cur_line == '' or self.__line_is_comment():
+                continue
+            self.__parse_this_line()
             if self._state == "DONE":
-                fid.close()
                 return
 
-        fid.close()
-        sys.exit("Reached the end of the file")
+        self._fid.close()
+        sys.exit("Reached the end of the file while still processing")
 
-    def __get_module_name_from_line(self, line_array):
-        self._properties["module_name"].append(line_array[1]) # TODO: What if there's an open paren at the end of the module name without a space?
-
-    def __get_parameters(self, fid):
-        for line in fid:
-            self._cur_line = line.lstrip().rstrip()
-            line_array = self._cur_line.split(" ")
-            if self._cur_line.find(")") != -1:
-                return
-            if not self.__line_is_comment(line_array):
-                self.__get_parameter_from_line(line_array)
-    
-    def __line_is_comment(self, line_array): #TODO: Doesn't handle block comments
+    def __line_is_comment(self): #TODO: Doesn't handle block comments
+        line_array = self._cur_line.split(" ")
+        if len(line_array) < 2:
+            return False
         if line_array[0][0] == "/" and line_array[0][1] == "/":
             return True
         else:
             return False
 
-    def __get_parameter_from_line(self, line_array):
+    def __parse_this_line(self):
+        if self._state == "MODULE":
+            if self.__get_module_name_from_line():
+                self._state = "START_PARAM_OR_PORT"
+            return
+        elif self._state == "START_PARAM_OR_PORT":
+            if self.__line_has_param_start():
+                self._state = "PARAMS"
+            elif self.__line_has_port_start():
+                self._state = "PORTS"
+            return
+        elif self._state == "PARAMS":
+            if self.__line_is_only_end_parenthesis():
+                self._state = "START_PORTS"
+            else:
+                self.__get_parameter_from_line()
+                if self.__line_has_end_parenthesis():
+                    self._state = "START_PORTS"
+            return
+        elif self._state == "START_PORTS":
+            if self.__line_has_port_start():
+                self._state = "PORTS"
+            return
+        elif self._state == "PORTS":
+            if self.__line_is_only_end_parenthesis():
+                self._state = "DONE"
+            else:
+                self.__get_port_from_line()
+                if self.__line_has_end_parenthesis():
+                    self._state = "DONE"
+            return
+        elif self._state == "DONE":
+            self._fid.close()
+            return
+
+    def __get_module_name_from_line(self):
+        line_array = self._cur_line.split(" ")
+        if line_array[0] == "module":
+            self._properties["module_name"].append(line_array[1]) # TODO: What if there's an open paren at the end of the module name without a space?
+            return True
+        else:
+            return False
+        
+    def __line_has_param_start(self):
+        line_array = self._cur_line.split(" ")
+        if self._cur_line.find("#(") != -1:
+            return True
+        else:
+            return False
+
+    def __line_has_port_start(self):
+        line_array = self._cur_line.split(" ")
+        if self._cur_line.find("(") != -1:
+            return True
+        else:
+            return False
+
+    def __get_parameter_from_line(self):
+        line_array = self._cur_line.split(" ")
         self._properties["parameters"].append(line_array[1]) # Parameter name
         self._properties["parameters"].append(self.__get_dimensions_from_line(0))
         self._properties["parameters"].append(self.__get_val_from_line()) # Parameter default value
@@ -112,17 +147,21 @@ class module_parser:
                 val = comma
         
         return val
+    
+    def __line_is_only_end_parenthesis(self):
+        if self._cur_line.find(")") == 0:
+            return True
+        else:
+            return False
 
-    def __get_ports(self, fid):
-        for line in fid:
-            self._cur_line = line.lstrip().rstrip()
-            line_array = self._cur_line.split(" ")
-            if self._cur_line.find(");") != -1:
-                return
-            if not self.__line_is_comment(line_array):
-                self.__get_port_from_line(line_array)
+    def __line_has_end_parenthesis(self):
+        if self._cur_line.find(")") != -1:
+            return True
+        else:
+            return False
 
-    def __get_port_from_line(self, line_array):
+    def __get_port_from_line(self):
+        line_array = self._cur_line.split(" ")
         if (line_array[0] == "input"):
             self._properties["inputs"].append(self.__get_dimensions_from_line(1))
             self._properties["inputs"].append(self.__get_signal_name_from_line())
@@ -159,7 +198,7 @@ class module_parser:
             if is_sig_name:
                 if (sig.find("clken") != -1):
                     continue
-                if sig.find("clk") or sig.find("clock"):
+                if sig.find("clk") != -1 or sig.find("clock") != -1:
                     self._properties["input_clocks"].append(sig)
             is_sig_name = not is_sig_name
 

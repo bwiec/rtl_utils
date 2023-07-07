@@ -13,5 +13,6 @@ if __name__ == "__main__":
     Args.pop(0)
     args = parser.parse_args(Args)
 
-    parser = module_parser(args.filename[0])
-    print(parser.get_module_properties())
+    for filename in args.filename:
+        parser = module_parser(filename)
+        print(parser.get_module_properties())
