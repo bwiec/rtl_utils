@@ -11,7 +11,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args" : ["./test/edge_det.v", "./test/sync_fifo.v"]
+            "args" : ["--debug", "./test/edge_det.v", "./test/sync_fifo.v"]
         }
     ]
 }
