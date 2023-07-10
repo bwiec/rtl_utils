@@ -34,7 +34,7 @@ class module_parser:
         for line in self._fid:
             self._cur_line_idx = self._cur_line_idx + 1
             self._cur_line = line.lstrip().rstrip()
-            if self._cur_line == '' or self.__line_is_comment():
+            if self._cur_line == '' or self.__line_is_comment() or self.__line_is_macro():
                 continue
             self.__parse_this_line()
             if self._state == "DONE":
@@ -51,6 +51,15 @@ class module_parser:
             return True
         else:
             return False
+        
+    def __line_is_macro(self):
+        line_array = self._cur_line.split(" ")
+        if len(line_array) < 2:
+            return False
+        if line_array[0][0] == "(" and line_array[0][1] == "*":
+            return True
+        else:
+            return False 
 
     def __parse_this_line(self):
         if self._state == "MODULE":
@@ -134,7 +143,7 @@ class module_parser:
             msb = dimensions[0]
             lsb = dimensions[1]
 
-        return self.__calc_dimensions(msb, lsb)
+        return self.__calc_dimensions(msb.strip(), lsb.strip())
 
     def __calc_dimensions(self, msb, lsb):
         if msb.isdigit() and lsb.isdigit(): # Base case - both values are integers
@@ -162,8 +171,9 @@ class module_parser:
 
             if len(param.split("clog2")) == 1: # clog2 is not used
                 if param.find(ii) != -1: # This parameter in the list is used in param string
-                    return str(eval(param.replace(ii, candidate_param_val)))
+                    return str(int(eval(param.replace(ii, candidate_param_val))))
                 else: # Not the right parameter to use
+                    loop_idx = loop_idx + 1
                     continue
             else: # Parameter match uses $clog2
                 if param.find(ii) != -1: # This parameter in the list is used in param string               
@@ -182,6 +192,7 @@ class module_parser:
                         else:
                             return "?"
                 else: # Not the right parameter to use
+                    loop_idx = loop_idx + 1
                     continue
             loop_idx = loop_idx + 1
         return "?" # Failed to evaluate parameter

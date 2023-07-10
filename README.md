@@ -8,4 +8,3 @@
 * Doesn't support functions besides clog2
 * Can't handle `` `define ``s
 * Can't handle string parameters
-* 
