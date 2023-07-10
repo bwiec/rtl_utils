@@ -17,6 +17,7 @@ module sync_fifo
 	output                  full,
 	output                  overflow,
 	output                  underflow,
+	output [$clog2(DATA_WIDTH)-1:0] occupancy,
         
     // Input interface
 	input                   we,

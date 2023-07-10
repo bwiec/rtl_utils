@@ -1,4 +1,5 @@
 import sys
+import math
 
 class module_parser:
     _properties = {
@@ -17,6 +18,12 @@ class module_parser:
 
     def __init__(self, file):
         self._file = file
+        self._properties["module_name"] = []
+        self._properties["parameters"] = []
+        self._properties["inputs"] = []
+        self._properties["outputs"] = []
+        self._properties["inouts"] = []
+        self._properties["input_clocks"] = []
         self.__parse_input_file()
         self.__get_input_clocks()
         
@@ -119,16 +126,63 @@ class module_parser:
 
             right = left.split("]")
             right = "".join(right[0])
-            print("right: ", right)
 
             dimensions = right.split(":")
 
             msb = dimensions[0]
             lsb = dimensions[1]
 
-        bit_width = int(msb) - int(lsb) + 1
+        return self.__calc_dimensions(msb, lsb)
 
-        return bit_width
+    def __calc_dimensions(self, msb, lsb):
+        if msb.isdigit() and lsb.isdigit(): # Base case - both values are integers
+            return int(msb) - int(lsb) + 1
+        else: # One or both values are defined by parameters
+            if not msb.isdigit():
+                msb = self.__param_to_digit(msb)
+            if not lsb.isdigit():
+                lsb = self.__param_to_digit(lsb)
+            if msb.isdigit() and lsb.isdigit(): # On successful attempt at evaluating both parameters, return calculated value
+                return int(msb) - int(lsb) + 1
+            else: # Couldn't successfully evaluate parameter value
+                return "?"
+
+    def __param_to_digit(self, param):
+        loop_idx = 0
+        for ii in self._properties["parameters"]:
+            if loop_idx % 3 == 0:
+                candidate_param_val = self._properties["parameters"][loop_idx+2]
+            else:
+                loop_idx = loop_idx + 1
+                continue
+            if ii == param: # Exact parameter value match
+                return candidate_param_val
+
+            if len(param.split("clog2")) == 1: # clog2 is not used
+                if param.find(ii) != -1: # This parameter in the list is used in param string
+                    return str(eval(param.replace(ii, candidate_param_val)))
+                else: # Not the right parameter to use
+                    continue
+            else: # Parameter match uses $clog2
+                if param.find(ii) != -1: # This parameter in the list is used in param string               
+                    val = candidate_param_val.split("clog2")
+                    val = "".join(val[len(val)-1])
+                    right = val.split("(")
+                    right = "".join(right)
+                    left = right.split(")")
+                    left = "".join(left[0])
+                    if left.isdigit(): # If argument to clog2 is an integer
+                        return str(math.ceil(math.log2(int(left))))
+                    else: # If argument to clog2 is another parameter
+                        evaluated_arg = self.__param_to_digit(left)
+                        if evaluated_arg.idigit():
+                            return str(math.ceil(math.log2(int(evaluated_arg))))
+                        else:
+                            return "?"
+                else: # Not the right parameter to use
+                    continue
+            loop_idx = loop_idx + 1
+        return "?" # Failed to evaluate parameter
 
     def __get_val_from_line(self):
         right = self._cur_line.split("=")
@@ -146,7 +200,7 @@ class module_parser:
             else:
                 val = comma
         
-        return val
+        return val.strip()
     
     def __line_is_only_end_parenthesis(self):
         if self._cur_line.find(")") == 0:
@@ -155,10 +209,23 @@ class module_parser:
             return False
 
     def __line_has_end_parenthesis(self):
-        if self._cur_line.find(")") != -1:
+        num_open_parenthesis = self.__get_num_occurrences(self._cur_line, "(")
+        num_closed_parenthesis = self.__get_num_occurrences(self._cur_line, ")")
+
+        if num_closed_parenthesis > num_open_parenthesis: # TODO: Fails for parenthesis in comments
             return True
         else:
             return False
+    
+    def __get_num_occurrences(self, total_string, substr_to_match):
+        start_idx = 0
+        cnt = 0
+        for ii in range(len(total_string)):
+            jj = total_string.find(substr_to_match, start_idx)
+            if (jj != -1):
+                start_idx = jj + 1
+                cnt += 1
+        return cnt
 
     def __get_port_from_line(self):
         line_array = self._cur_line.split(" ")
