@@ -4,19 +4,19 @@ import sys
 import argparse
 from module_parser import module_parser
 
-def _print_instantiation(properties):
-    print(properties["module_name"][0] + " ", end="")
+def _print_instantiation(properties, prefix):
+    print(prefix + properties["module_name"][0] + " ", end="")
     if len(properties["parameters"]) > 0:
         print("")
-        print("#(")
-        _print_properties(properties["parameters"])
-        print(")")
-    print(properties["module_name"][0] + "_inst")
-    print("(")
-    _print_signals(properties["ordered_signals"])
-    print(");")
+        print(prefix + "#(")
+        _print_properties(properties["parameters"], prefix)
+        print(prefix + ")")
+    print(prefix + properties["module_name"][0] + "_inst")
+    print(prefix + "(")
+    _print_signals(properties["ordered_signals"], prefix)
+    print(prefix + ");")
 
-def _print_properties(parameters):
+def _print_properties(parameters, prefix):
     loop_idx = 0
     for ii in parameters:
         if loop_idx % 3 == 0:
@@ -24,10 +24,10 @@ def _print_properties(parameters):
                 this_line = "\t." + ii + "(" + ii + ")"
             else:
                 this_line = "\t." + ii + "(" + ii + "),"
-            print(this_line)
+            print(prefix + this_line)
         loop_idx += 1
 
-def _print_signals(signals):
+def _print_signals(signals, prefix):
     loop_idx = 0
     for ii in signals:
         if loop_idx % 2 == 0:
@@ -35,7 +35,7 @@ def _print_signals(signals):
                 this_line = "\t." + ii + "(" + ii + ")"
             else:
                 this_line = "\t." + ii + "(" + ii + "),"
-            print(this_line)
+            print(prefix + this_line)
         loop_idx += 1
 
 # Entry point of this file
@@ -54,4 +54,4 @@ if __name__ == "__main__":
         if args.debug:
             print(properties)
         
-        _print_instantiation(properties)
+        _print_instantiation(properties, "")
