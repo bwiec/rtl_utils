@@ -5,6 +5,7 @@ class module_parser:
     _properties = {
         "module_name" : [],
         "parameters" : [],
+        "ordered_signals" : [],
         "inputs" : [],
         "outputs" : [],
         "inouts" : [],
@@ -20,6 +21,7 @@ class module_parser:
         self._file = file
         self._properties["module_name"] = []
         self._properties["parameters"] = []
+        self._properties["ordered_signals"] = []
         self._properties["inputs"] = []
         self._properties["outputs"] = []
         self._properties["inouts"] = []
@@ -230,14 +232,20 @@ class module_parser:
     def __get_port_from_line(self):
         line_array = self._cur_line.split(" ")
         if (line_array[0] == "input"):
-            self._properties["inputs"].append(self.__get_dimensions_from_line(1))
             self._properties["inputs"].append(self.__get_signal_name_from_line())
+            self._properties["inputs"].append(self.__get_dimensions_from_line(1))
+            self._properties["ordered_signals"].append(self.__get_signal_name_from_line())
+            self._properties["ordered_signals"].append(self.__get_dimensions_from_line(1))
         elif (line_array[0] == "output"):
-            self._properties["outputs"].append(self.__get_dimensions_from_line(1))
             self._properties["outputs"].append(self.__get_signal_name_from_line())
+            self._properties["outputs"].append(self.__get_dimensions_from_line(1))
+            self._properties["ordered_signals"].append(self.__get_signal_name_from_line())
+            self._properties["ordered_signals"].append(self.__get_dimensions_from_line(1))
         elif (line_array[0] == "inout"):
-            self._properties["inouts"].append(self.__get_dimensions_from_line(1))
             self._properties["inouts"].append(self.__get_signal_name_from_line())
+            self._properties["inouts"].append(self.__get_dimensions_from_line(1))
+            self._properties["ordered_signals"].append(self.__get_signal_name_from_line())
+            self._properties["ordered_signals"].append(self.__get_dimensions_from_line(1))
         else:
             sys.exit("Unknown port type")
 
@@ -260,7 +268,7 @@ class module_parser:
         return val
 
     def __get_input_clocks(self):
-        is_sig_name = False
+        is_sig_name = True
         for sig in self._properties["inputs"]:
             if is_sig_name:
                 if (sig.find("clken") != -1):
