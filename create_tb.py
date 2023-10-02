@@ -73,7 +73,7 @@ def _print_signals(signals, io_type):
 
 def _print_clock_generation(clks):
     for ii in clks:
-        print("\talways #(" + ii.upper() + "_PER) " + ii + " = ~" + ii + ";")
+        print("\talways #(" + ii.upper() + "_PER/2) " + ii + " = ~" + ii + ";")
 
 def _print_reset_task_template(first_clk):
     print("\ttask release_reset;")
