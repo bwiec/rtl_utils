@@ -1,0 +1,8 @@
+.vscode/
+build/
+.Xil/
+vivado.*
+*.log
+*.jou
+*.str
+test/*.dat
